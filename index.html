@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STELLAR COMMAND — Browser Space MMO</title>
+  <meta name="description" content="A real-time browser MMO set in the Shattered Veil universe. Explore deep space, claim planets, command fleets, and uncover the ruins of the Builders.">
+  <meta property="og:title" content="STELLAR COMMAND">
+  <meta property="og:description" content="A real-time browser MMO. Explore. Conquer. Command.">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cyan:   #00FFFF;
+      --green:  #39FF14;
+      --yellow: #FFEA00;
+      --red:    #FF4040;
+      --bg:     #02040A;
+      --panel:  #080F1A;
+      --border: rgba(0,255,255,0.15);
+      --text:   #C8D8E8;
+      --dim:    #4A6080;
+      --font:   'Space Grotesk', monospace;
+      --game:   https://stellar-command.fly.dev;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior: smooth; }
+    body { background:var(--bg); color:var(--text); font-family:var(--font); overflow-x:hidden; }
+
+    body::after {
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:9999;
+      background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.018) 2px,rgba(0,0,0,0.018) 4px);
+    }
+
+    /* ── NAV ─────────────────────────────────────────────────── */
+    nav {
+      position:fixed; top:0; left:0; right:0; z-index:100;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:16px 48px;
+      background:rgba(2,4,10,0.88); backdrop-filter:blur(14px);
+      border-bottom:1px solid rgba(0,255,255,0.07);
+    }
+    .nav-logo { font-size:14px; font-weight:700; letter-spacing:6px; color:var(--cyan); text-decoration:none; text-shadow:0 0 16px rgba(0,255,255,0.4); }
+    .nav-logo span { color:var(--text); font-weight:400; }
+    .nav-links { display:flex; gap:32px; align-items:center; }
+    .nav-links a { font-size:10px; letter-spacing:3px; color:var(--dim); text-decoration:none; transition:color .2s; }
+    .nav-links a:hover { color:var(--cyan); }
+    .nav-play {
+      padding:9px 24px; border:1px solid var(--cyan); border-radius:2px;
+      color:var(--cyan) !important; font-weight:700 !important; letter-spacing:3px !important; font-size:10px !important;
+      transition:background .2s, box-shadow .2s !important;
+    }
+    .nav-play:hover { background:rgba(0,255,255,0.08) !important; box-shadow:0 0 16px rgba(0,255,255,0.2) !important; }
+
+    /* ── HERO ────────────────────────────────────────────────── */
+    #hero {
+      position:relative; min-height:100vh;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center; padding:120px 24px 80px; overflow:hidden;
+    }
+    #starCanvas { position:absolute; inset:0; width:100%; height:100%; z-index:0; }
+    .hero-content { position:relative; z-index:2; max-width:860px; }
+    .hero-eyebrow { font-size:10px; letter-spacing:6px; color:var(--dim); margin-bottom:20px; }
+    .hero-eyebrow span { color:var(--cyan); }
+    .hero-title {
+      font-size:clamp(52px,9vw,100px); font-weight:700; letter-spacing:12px; line-height:1;
+      color:var(--cyan); text-shadow:0 0 60px rgba(0,255,255,0.35), 0 0 120px rgba(0,255,255,0.15);
+      margin-bottom:8px;
+    }
+    .hero-subtitle { font-size:clamp(14px,2vw,20px); font-weight:300; letter-spacing:8px; color:var(--text); opacity:.6; margin-bottom:28px; }
+    .hero-divider { width:240px; height:1px; margin:0 auto 32px; background:linear-gradient(90deg,transparent,var(--cyan),transparent); opacity:.4; }
+    .hero-tagline { font-size:clamp(14px,2vw,18px); font-weight:400; line-height:1.7; color:var(--text); opacity:.75; max-width:600px; margin:0 auto 48px; }
+    .hero-ctas { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; }
+    .btn-primary {
+      display:inline-block; padding:16px 48px; border:1px solid var(--cyan); border-radius:2px;
+      color:var(--cyan); font-family:var(--font); font-size:13px; font-weight:700; letter-spacing:4px;
+      text-decoration:none; transition:background .2s, box-shadow .2s; background:transparent;
+    }
+    .btn-primary:hover { background:rgba(0,255,255,0.08); box-shadow:0 0 32px rgba(0,255,255,0.25); }
+    .btn-secondary {
+      display:inline-block; padding:16px 32px; border:1px solid rgba(200,216,232,0.2); border-radius:2px;
+      color:var(--text); opacity:.6; font-family:var(--font); font-size:13px; font-weight:500; letter-spacing:3px;
+      text-decoration:none; transition:border-color .2s, opacity .2s;
+    }
+    .btn-secondary:hover { border-color:rgba(200,216,232,0.4); opacity:.9; }
+    .hero-scroll { position:absolute; bottom:32px; left:50%; transform:translateX(-50%); z-index:2; display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .hero-scroll span { font-size:8px; letter-spacing:4px; color:var(--dim); }
+    .scroll-line { width:1px; height:48px; background:linear-gradient(to bottom,var(--cyan),transparent); animation:scrollPulse 2s ease-in-out infinite; }
+    @keyframes scrollPulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+
+    /* ── SHARED SECTION ──────────────────────────────────────── */
+    .section-wrap { padding:100px 48px; max-width:1200px; margin:0 auto; }
+    .section-full { padding:100px 0; border-top:1px solid rgba(0,255,255,0.06); }
+    .section-full .section-wrap { padding-top:0; padding-bottom:0; }
+    .section-label { font-size:9px; letter-spacing:5px; color:var(--cyan); margin-bottom:12px; display:flex; align-items:center; gap:12px; }
+    .section-label::before { content:''; width:32px; height:1px; background:var(--cyan); opacity:.5; }
+    .section-title { font-size:clamp(28px,4vw,44px); font-weight:700; letter-spacing:4px; color:var(--text); line-height:1.15; margin-bottom:20px; }
+    .section-title em { color:var(--cyan); font-style:normal; }
+    .section-body { font-size:15px; line-height:1.8; color:var(--text); opacity:.7; max-width:720px; }
+
+    /* ── LORE GRID ───────────────────────────────────────────── */
+    .lore-grid { display:grid; grid-template-columns:1fr 1fr; gap:32px; margin-top:56px; }
+    @media(max-width:768px){ .lore-grid { grid-template-columns:1fr; } }
+    .lore-block {
+      background:var(--panel); border:1px solid var(--border); border-radius:4px; padding:28px 30px;
+      position:relative; overflow:hidden; transition:border-color .25s;
+    }
+    .lore-block:hover { border-color:rgba(0,255,255,0.3); }
+    .lore-block::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--cyan),transparent); opacity:.3; }
+    .lore-block-tag { font-size:8px; letter-spacing:4px; color:var(--cyan); margin-bottom:10px; opacity:.7; }
+    .lore-block-title { font-size:16px; font-weight:700; letter-spacing:3px; color:var(--text); margin-bottom:12px; }
+    .lore-block-body { font-size:13px; line-height:1.75; color:var(--text); opacity:.65; }
+
+    /* ── STORY PULL ──────────────────────────────────────────── */
+    .story-pull {
+      font-size:clamp(17px,2.2vw,24px); font-weight:300; line-height:1.7; color:var(--text); opacity:.85;
+      max-width:860px; border-left:2px solid var(--cyan); padding-left:32px; margin:48px 0;
+    }
+
+    /* ── FACTIONS ────────────────────────────────────────────── */
+    .factions-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-top:56px; }
+    @media(max-width:900px){ .factions-grid { grid-template-columns:1fr 1fr; } }
+    @media(max-width:500px){ .factions-grid { grid-template-columns:1fr; } }
+    .faction-card {
+      background:var(--panel); border:1px solid var(--border); border-radius:4px;
+      overflow:hidden; transition:transform .2s, border-color .2s;
+      display:flex; flex-direction:column;
+    }
+    .faction-card:hover { transform:translateY(-4px); }
+    .faction-card.concord  { --accent:#00FFFF; }
+    .faction-card.freewake { --accent:#39FF14; }
+    .faction-card.syndicate{ --accent:#FF4040; }
+    .faction-card.cartographer { --accent:#FFEA00; }
+    .faction-card:hover { border-color:var(--accent); box-shadow:0 8px 32px rgba(0,0,0,0.4); }
+    .faction-logo-wrap {
+      width:100%; aspect-ratio:1/1; overflow:hidden;
+      background:rgba(0,0,0,0.3);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .faction-logo-wrap img {
+      width:100%; height:100%; object-fit:cover;
+      transition:transform .3s;
+    }
+    .faction-card:hover .faction-logo-wrap img { transform:scale(1.04); }
+    .faction-logo-wrap .faction-icon-fallback {
+      font-size:48px; opacity:.3;
+    }
+    .faction-body { padding:20px 20px 22px; flex:1; }
+    .faction-name { font-size:11px; font-weight:700; letter-spacing:3px; color:var(--accent); margin-bottom:4px; }
+    .faction-type { font-size:9px; letter-spacing:2px; color:var(--dim); margin-bottom:12px; }
+    .faction-desc { font-size:12px; line-height:1.7; color:var(--text); opacity:.6; }
+
+    /* ── FEATURES ────────────────────────────────────────────── */
+    .features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:56px; }
+    @media(max-width:800px){ .features-grid { grid-template-columns:1fr 1fr; } }
+    @media(max-width:480px){ .features-grid { grid-template-columns:1fr; } }
+    .feature-card {
+      padding:28px 26px; border:1px solid rgba(0,255,255,0.08); border-radius:4px; background:var(--panel);
+      transition:border-color .2s, background .2s;
+    }
+    .feature-card:hover { border-color:rgba(0,255,255,0.2); background:rgba(0,255,255,0.02); }
+    .feature-icon { font-size:22px; margin-bottom:14px; }
+    .feature-title { font-size:12px; font-weight:700; letter-spacing:3px; color:var(--text); margin-bottom:10px; }
+    .feature-desc { font-size:12px; line-height:1.7; color:var(--dim); }
+
+    /* ── SHIP GALLERY ────────────────────────────────────────── */
+    .ships-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:24px; margin-top:56px; }
+    .ship-card {
+      background:var(--panel); border:1px solid var(--border); border-radius:4px;
+      overflow:hidden; transition:border-color .2s, transform .2s;
+      display:flex; flex-direction:column;
+    }
+    .ship-card:hover { border-color:rgba(0,255,255,0.35); transform:translateY(-3px); box-shadow:0 12px 40px rgba(0,0,0,0.5); }
+
+    /* Ship image display */
+    .ship-img-wrap {
+      width:100%; aspect-ratio:1/1; max-height:220px;
+      background:radial-gradient(ellipse at center, rgba(0,255,255,0.06) 0%, rgba(2,4,10,0.95) 70%);
+      display:flex; align-items:center; justify-content:center;
+      overflow:hidden; position:relative;
+    }
+    .ship-img-wrap::after {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(to bottom, transparent 60%, var(--panel) 100%);
+      pointer-events:none;
+    }
+    .ship-img-wrap img {
+      width:72%; height:72%; object-fit:contain;
+      image-rendering:pixelated;
+      filter:drop-shadow(0 0 16px rgba(0,255,255,0.35)) drop-shadow(0 0 40px rgba(0,255,255,0.15));
+      transition:transform .3s, filter .3s;
+    }
+    .ship-card:hover .ship-img-wrap img {
+      transform:scale(1.08);
+      filter:drop-shadow(0 0 24px rgba(0,255,255,0.55)) drop-shadow(0 0 60px rgba(0,255,255,0.25));
+    }
+    .ship-body { padding:18px 20px 20px; flex:1; }
+    .ship-rank-badge { font-size:8px; letter-spacing:3px; color:var(--dim); margin-bottom:6px; }
+    .ship-name { font-size:15px; font-weight:700; letter-spacing:3px; color:var(--cyan); margin-bottom:3px; }
+    .ship-class { font-size:9px; letter-spacing:2px; color:var(--dim); margin-bottom:3px; }
+    .ship-origin { font-size:9px; letter-spacing:1px; color:rgba(0,255,255,0.45); margin-bottom:12px; font-style:italic; }
+    .ship-lore { font-size:11px; line-height:1.75; color:var(--text); opacity:.55; }
+
+    /* ── BATTLE PASS ─────────────────────────────────────────── */
+    .bp-section { border-top:1px solid rgba(0,255,255,0.06); padding:80px 0; background:linear-gradient(180deg,rgba(255,234,0,0.02) 0%,transparent 100%); }
+    .bp-inner { max-width:1200px; margin:0 auto; padding:0 48px; display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:center; }
+    @media(max-width:768px){ .bp-inner { grid-template-columns:1fr; } }
+    .bp-badge { display:inline-block; font-size:11px; font-weight:700; letter-spacing:4px; color:var(--yellow); border:1px solid rgba(255,234,0,0.4); padding:6px 18px; border-radius:2px; margin-bottom:20px; background:rgba(255,234,0,0.05); text-shadow:0 0 8px rgba(255,234,0,0.3); }
+    .bp-title { font-size:clamp(28px,4vw,42px); font-weight:700; letter-spacing:3px; color:var(--text); line-height:1.2; margin-bottom:20px; }
+    .bp-title em { color:var(--yellow); font-style:normal; }
+    .bp-body { font-size:14px; line-height:1.8; color:var(--text); opacity:.65; margin-bottom:32px; }
+    .bp-tiers { display:flex; flex-direction:column; gap:12px; }
+    .bp-tier-row { display:flex; align-items:flex-start; gap:14px; padding:14px 16px; border:1px solid rgba(255,234,0,0.1); border-radius:3px; background:rgba(255,234,0,0.03); }
+    .bp-tier-num { font-size:10px; font-weight:700; letter-spacing:2px; color:var(--yellow); white-space:nowrap; padding-top:2px; }
+    .bp-tier-name { font-size:12px; font-weight:700; letter-spacing:2px; color:var(--text); }
+    .bp-tier-lore { font-size:10px; line-height:1.6; color:var(--dim); margin-top:3px; }
+
+    /* ── CTA ─────────────────────────────────────────────────── */
+    #cta { border-top:1px solid rgba(0,255,255,0.08); padding:120px 48px; text-align:center; position:relative; overflow:hidden; }
+    #ctaCanvas { position:absolute; inset:0; width:100%; height:100%; z-index:0; }
+    .cta-content { position:relative; z-index:2; }
+    .cta-title { font-size:clamp(32px,6vw,72px); font-weight:700; letter-spacing:8px; color:var(--cyan); text-shadow:0 0 60px rgba(0,255,255,0.3); margin-bottom:16px; }
+    .cta-sub { font-size:14px; letter-spacing:4px; color:var(--dim); margin-bottom:48px; }
+
+    /* ── FOOTER ──────────────────────────────────────────────── */
+    footer { border-top:1px solid rgba(0,255,255,0.06); padding:32px 48px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+    .footer-logo { font-size:11px; font-weight:700; letter-spacing:5px; color:var(--cyan); text-shadow:0 0 10px rgba(0,255,255,0.3); }
+    footer p { font-size:10px; letter-spacing:2px; color:var(--dim); }
+    .glow-dot { display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--cyan); margin-right:8px; animation:glowPulse 2s ease-in-out infinite; }
+    @keyframes glowPulse { 0%,100%{box-shadow:0 0 4px var(--cyan)} 50%{box-shadow:0 0 14px var(--cyan)} }
+
+    /* ── SCROLL REVEAL ───────────────────────────────────────── */
+    .reveal { opacity:0; transform:translateY(28px); transition:opacity 0.65s ease, transform 0.65s ease; }
+    .reveal.visible { opacity:1; transform:translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ───────────────────────────────────────────────────── -->
+<nav>
+  <a class="nav-logo" href="#">STELLAR <span>COMMAND</span></a>
+  <div class="nav-links">
+    <a href="#lore">UNIVERSE</a>
+    <a href="#factions">FACTIONS</a>
+    <a href="#features">FEATURES</a>
+    <a href="#ships">SHIPS</a>
+    <a href="https://stellar-command.fly.dev" class="nav-play">PLAY NOW ▶</a>
+  </div>
+</nav>
+
+<!-- ── HERO ──────────────────────────────────────────────────── -->
+<div id="hero">
+  <canvas id="starCanvas"></canvas>
+  <div class="hero-content">
+    <div class="hero-eyebrow">SET IN <span>THE SHATTERED VEIL UNIVERSE</span></div>
+    <div class="hero-title">STELLAR<br>COMMAND</div>
+    <div class="hero-subtitle">TACTICAL SPACE OPERATIONS</div>
+    <div class="hero-divider"></div>
+    <p class="hero-tagline">
+      A real-time browser MMO set in a universe broken by ancient catastrophe.
+      Explore deep space. Claim planets. Command fleets.
+      Uncover the ruins of the Builders — and survive what guards them.
+    </p>
+    <div class="hero-ctas">
+      <a href="https://stellar-command.fly.dev" class="btn-primary">LAUNCH GAME ▶</a>
+      <a href="#lore" class="btn-secondary">READ THE LORE ↓</a>
+    </div>
+  </div>
+  <div class="hero-scroll"><span>SCROLL</span><div class="scroll-line"></div></div>
+</div>
+
+<!-- ── UNIVERSE LORE ──────────────────────────────────────────── -->
+<div class="section-full" id="lore">
+  <div class="section-wrap">
+    <div class="section-label">THE SHATTERED VEIL UNIVERSE</div>
+    <h2 class="section-title">Before the <em>Shattering</em>,<br>the Builders made the Veil.</h2>
+    <p class="section-body">
+      Thousands of years ago, a civilisation known only as the Builders created a transit network spanning the galaxy —
+      a dimension-adjacent layer called the Veil. Through it, ships could cross light-years in seconds.
+      Humanity found their ruins, reverse-engineered their technology, and built an age of expansion.
+      Then something went wrong.
+    </p>
+    <div class="lore-grid">
+      <div class="lore-block reveal">
+        <div class="lore-block-tag">ORIGIN</div>
+        <div class="lore-block-title">THE BUILDERS</div>
+        <div class="lore-block-body">No one knows what the Builders were, or where they went. What remains are ruins — structures built from a metamaterial that absorbs and transmits Veil harmonic energy in ways human science cannot fully replicate. Every major faction has funded expeditions to Builder sites. Every faction has classified what they found. The ships that incorporate recovered Builder components are the most dangerous vessels in known space — and the least understood.</div>
+      </div>
+      <div class="lore-block reveal">
+        <div class="lore-block-tag">THE TRANSIT NETWORK</div>
+        <div class="lore-block-title">THE VEIL</div>
+        <div class="lore-block-body">The Veil is not empty space. Navigators describe it as a place with geometry that does not match the physical universe — where distances compress, where information seems to propagate before it is transmitted, and where something moves in the deep layers that does not respond to hailing frequencies. The Builders built the Veil for a purpose no one has determined. Humanity uses it anyway.</div>
+      </div>
+      <div class="lore-block reveal">
+        <div class="lore-block-tag">THE CATASTROPHE</div>
+        <div class="lore-block-title">THE SHATTERING</div>
+        <div class="lore-block-body">The Shattering was not a war, not a natural disaster, and not an accident — or at least, no single explanation has survived scrutiny. In the span of weeks, Veil transit routes destabilised across the galaxy. Supply lines collapsed. Colonial fleets lost contact with home systems. Civilisations that had grown dependent on instant transit found themselves isolated overnight. Two centuries later, the cause remains officially undetermined.</div>
+      </div>
+      <div class="lore-block reveal">
+        <div class="lore-block-tag">THE UNKNOWN</div>
+        <div class="lore-block-title">THE WRAITHS</div>
+        <div class="lore-block-body">Since the Shattering, reports have accumulated of entities encountered in Veil-space during transit — shapes that do not match any known vessel design, that move without propulsion signatures, that appear on sensors as nothing consistent with matter. They have been named the Wraiths. They have never been successfully communicated with. Ships carrying Builder metamaterial report increased Wraith activity near their approach vectors. The Builders knew what the Wraiths were. They left no explanation.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── STORY PULL ─────────────────────────────────────────────── -->
+<div style="border-top:1px solid rgba(0,255,255,0.06); padding:80px 0; background:linear-gradient(180deg,rgba(0,255,255,0.015) 0%,transparent 100%);">
+  <div style="max-width:1200px; margin:0 auto; padding:0 48px;">
+    <div class="section-label">THE AGE OF LANTERNS</div>
+    <blockquote class="story-pull">
+      "Before the Shattering, every colony had a beacon — a signal that said
+      <em>we are here, we are alive, come find us.</em>
+      When the Veil fractured, the beacons kept broadcasting.
+      No one came. That is why they call it the Age of Lanterns.
+      Not because of the light. Because of what the light meant after the darkness."
+    </blockquote>
+    <p class="section-body">
+      Stellar Command is set in the aftermath. Centuries after the Shattering, humanity has rebuilt —
+      not into a single civilisation, but into competing factions, each with a different answer to the same question:
+      what do we do now? You play as an independent commander operating in the spaces between them,
+      building your own legacy in a galaxy that is still, slowly, coming back to life.
+    </p>
+  </div>
+</div>
+
+<!-- ── FACTIONS ───────────────────────────────────────────────── -->
+<div class="section-full" id="factions">
+  <div class="section-wrap">
+    <div class="section-label">MAJOR POWERS</div>
+    <h2 class="section-title">Four factions. One <em>fractured galaxy.</em></h2>
+    <p class="section-body">Each faction survived the Shattering differently and rebuilt around a different philosophy. As an independent commander, you operate in the spaces between them — trading with some, raiding others, always answerable only to yourself.</p>
+    <div class="factions-grid">
+
+      <div class="faction-card concord reveal">
+        <div class="faction-logo-wrap">
+          <img src="images/faction-concord.png" alt="Concord of Sol" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="faction-icon-fallback" style="display:none">⊕</div>
+        </div>
+        <div class="faction-body">
+          <div class="faction-name">CONCORD OF SOL</div>
+          <div class="faction-type">MILITARY ORDER · INNER SYSTEMS</div>
+          <div class="faction-desc">The remnant of humanity's pre-Shattering central government, rebuilt around military doctrine and the principle that order must be enforced before it can be chosen. Their ships are the most powerful in known space. Their methods are not questioned by anyone who wants to keep flying.</div>
+        </div>
+      </div>
+
+      <div class="faction-card freewake reveal">
+        <div class="faction-logo-wrap">
+          <img src="images/faction-freewake.png" alt="Freewake Coalition" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="faction-icon-fallback" style="display:none">◎</div>
+        </div>
+        <div class="faction-body">
+          <div class="faction-name">FREEWAKE COALITION</div>
+          <div class="faction-type">FRONTIER ALLIANCE · OUTER RIM</div>
+          <div class="faction-desc">Born in the outer rim colonies that the Concord abandoned after the Shattering, the Freewake Coalition is less a government than a promise — that the frontier will protect itself, that independent pilots matter, and that the inner systems do not get to decide how the rim survives.</div>
+        </div>
+      </div>
+
+      <div class="faction-card syndicate reveal">
+        <div class="faction-logo-wrap">
+          <img src="images/faction-syndicate.png" alt="Black Banner Syndicate" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="faction-icon-fallback" style="display:none">✕</div>
+        </div>
+        <div class="faction-body">
+          <div class="faction-name">BLACK BANNER SYNDICATE</div>
+          <div class="faction-type">CRIMINAL EMPIRE · SHADOW LANES</div>
+          <div class="faction-desc">In the chaos after the Shattering, the Syndicate filled the voids that legitimate governance could not reach. They are not ideological. They have contracts, leverage, and a fleet roster that Concord intelligence has never fully accounted for.</div>
+        </div>
+      </div>
+
+      <div class="faction-card cartographer reveal">
+        <div class="faction-logo-wrap">
+          <img src="images/faction-cartographer.png" alt="Cartographer Houses" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="faction-icon-fallback" style="display:none">◆</div>
+        </div>
+        <div class="faction-body">
+          <div class="faction-name">CARTOGRAPHER HOUSES</div>
+          <div class="faction-type">KNOWLEDGE GUILD · ALL SECTORS</div>
+          <div class="faction-desc">The Cartographer Houses sell one thing: information. Maps of Veil-stable routes. Lore recovered from Builder sites. Intelligence on faction movements. In a galaxy where the Shattering deleted the common knowledge base, whoever controls information controls the future.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── FEATURES ───────────────────────────────────────────────── -->
+<div class="section-full" id="features">
+  <div class="section-wrap">
+    <div class="section-label">GAMEPLAY</div>
+    <h2 class="section-title">A living galaxy. <em>Real stakes.</em></h2>
+    <p class="section-body">Stellar Command runs in your browser with no download, no install, no client. Every planet, every beacon, every named system exists in a shared persistent world alongside every other commander online.</p>
+    <div class="features-grid">
+      <div class="feature-card reveal"><div class="feature-icon">⚡</div><div class="feature-title">REAL-TIME COMBAT</div><div class="feature-desc">Pilot your ship directly with mouse and keyboard. Engage enemies with precision lasers, seeker missiles, and timed boost manoeuvres. Every shot is physics-simulated. Every kill is permanent until you respawn.</div></div>
+      <div class="feature-card reveal"><div class="feature-icon">◎</div><div class="feature-title">PLANET ECONOMY</div><div class="feature-desc">Explore the sector and claim unclaimed planets. Name them — AI generates unique in-universe lore on the spot — and they generate passive Cosmic Token income every second. Other commanders can conquer them back.</div></div>
+      <div class="feature-card reveal"><div class="feature-icon">▲</div><div class="feature-title">FLEET COMMAND</div><div class="feature-desc">Purchase escort ships and build a fleet that fights alongside you. Unlock advanced fleet skills to boost their firepower, health, and attack range. Your fleet persists across sessions.</div></div>
+      <div class="feature-card reveal"><div class="feature-icon">⬡</div><div class="feature-title">SKILL TREE</div><div class="feature-desc">Earn a skill point with every rank-up. Spend them across five branches — Combat, Navigation, Industry, Survival, Command — each permanently changing how your ship performs.</div></div>
+      <div class="feature-card reveal"><div class="feature-icon">◆</div><div class="feature-title">ASTEROID MINING</div><div class="feature-desc">Rich asteroids across the sector contain recoverable loot. Mine them, fill your cargo hold, then sell for Cosmic Tokens. Find an epic Builder Relic Core and a single run funds an entire ship upgrade.</div></div>
+      <div class="feature-card reveal"><div class="feature-icon">★</div><div class="feature-title">BATTLE PASS</div><div class="feature-desc">Unlock 33 exclusive ship skins and earn the ✦ FOUNDER status permanently. Every Battle Pass ship comes with full in-universe lore connecting it to the Builders, the Veil, or one of the four factions.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SHIP GALLERY ───────────────────────────────────────────── -->
+<div class="section-full" id="ships">
+  <div class="section-wrap">
+    <div class="section-label">VESSEL DOSSIER</div>
+    <h2 class="section-title">Every ship has a <em>history.</em></h2>
+    <p class="section-body">Ships are unlocked as you rank up, each with a documented origin in the Shattered Veil universe. From a surplus colonial skiff to a titan-class hull built from Builder metamaterial — your vessel tells the galaxy who you are.</p>
+    <div class="ships-grid">
+
+      <div class="ship-card reveal">
+        <div class="ship-img-wrap">
+          <img src="https://stellar-command.fly.dev/assets/ships/progression/rank1.png" alt="Starling">
+        </div>
+        <div class="ship-body">
+          <div class="ship-rank-badge">RANK 1 · STARTER VESSEL</div>
+          <div class="ship-name">STARLING</div>
+          <div class="ship-class">Colonial Survey Skiff</div>
+          <div class="ship-origin">Freewake Coalition, Outer Rim Surplus</div>
+          <div class="ship-lore">Never designed to be a warship. When the Shattering disrupted supply lines and left colonies stranded, surplus Starlings became the lifeblood of independent pilots everywhere. Spacers say a Starling can be fixed with salvage, willpower, and a bad attitude.</div>
+        </div>
+      </div>
+
+      <div class="ship-card reveal">
+        <div class="ship-img-wrap">
+          <img src="https://stellar-command.fly.dev/assets/ships/progression/rank15.png" alt="Falcon">
+        </div>
+        <div class="ship-body">
+          <div class="ship-rank-badge">RANK 15 · SCOUT HUNTER</div>
+          <div class="ship-name">FALCON</div>
+          <div class="ship-class">Deep Survey Vessel</div>
+          <div class="ship-origin">Cartographer Houses, Deep Survey Division</div>
+          <div class="ship-lore">Built to survive long-range survey runs into Veil-unstable space. Its cockpit sensor array can detect Builder harmonic signatures at twice the range of military equivalents. The maps its pilots brought back were worth more than entire colonial fleets.</div>
+        </div>
+      </div>
+
+      <div class="ship-card reveal">
+        <div class="ship-img-wrap">
+          <img src="https://stellar-command.fly.dev/assets/ships/progression/rank30.png" alt="Viper">
+        </div>
+        <div class="ship-body">
+          <div class="ship-rank-badge">RANK 30 · STRIKE CRAFT</div>
+          <div class="ship-name">VIPER</div>
+          <div class="ship-class">Wraith Interdiction</div>
+          <div class="ship-origin">Concord of Sol, Wraith Interdiction Programme</div>
+          <div class="ship-lore">Engineered with a specific enemy in mind: the Wraiths. Its angular hull is laced with Veil-resistant metamaterial salvaged from Builder ruins. The Concord never confirmed how many Builder sites were stripped to produce the first Viper squadron.</div>
+        </div>
+      </div>
+
+      <div class="ship-card reveal">
+        <div class="ship-img-wrap">
+          <img src="https://stellar-command.fly.dev/assets/ships/progression/rank45.png" alt="Phantom">
+        </div>
+        <div class="ship-body">
+          <div class="ship-rank-badge">RANK 45 · STEALTH CRUISER</div>
+          <div class="ship-name">PHANTOM</div>
+          <div class="ship-class">Classified Deep Survey</div>
+          <div class="ship-origin">Cartographer Houses, Classified Programme</div>
+          <div class="ship-lore">Developed by reverse-engineering Builder transit nodes found across four systems — a process that reportedly drove two engineers to permanent psychological instability. In some technical sense, this ship is partially made of something that predates humanity.</div>
+        </div>
+      </div>
+
+      <div class="ship-card reveal">
+        <div class="ship-img-wrap">
+          <img src="https://stellar-command.fly.dev/assets/ships/progression/rank55.png" alt="Valkyrie">
+        </div>
+        <div class="ship-body">
+          <div class="ship-rank-badge">RANK 55 · COMMAND FRIGATE</div>
+          <div class="ship-name">VALKYRIE</div>
+          <div class="ship-class">Battle of the Lantern Roads</div>
+          <div class="ship-origin">Concord of Sol</div>
+          <div class="ship-lore">Earned its name where three of these frigates coordinated a twelve-ship defence against a Syndicate siege fleet that outnumbered them four to one. Every Valkyrie that enters service has the Lantern Roads inscription stamped inside the airlock.</div>
+        </div>
+      </div>
+
+      <div class="ship-card reveal">
+        <div class="ship-img-wrap">
+          <img src="https://stellar-command.fly.dev/assets/ships/progression/rank70.png" alt="Leviathan">
+        </div>
+        <div class="ship-body">
+          <div class="ship-rank-badge">RANK 70 · TITAN CLASS</div>
+          <div class="ship-name">LEVIATHAN</div>
+          <div class="ship-class">Fewer Than Forty Hulls</div>
+          <div class="ship-origin">Unknown Origin</div>
+          <div class="ship-lore">Each hand-built over years, incorporating Builder metamaterial in the hull spine. Wraith signature readings spike whenever a Leviathan enters a system. The ships do not care. The Wraiths have learned to move aside.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── BATTLE PASS ────────────────────────────────────────────── -->
+<div class="bp-section">
+  <div class="bp-inner">
+    <div>
+      <div class="bp-badge">✦ FOUNDER STATUS</div>
+      <h2 class="bp-title">33 ships.<br>One <em>permanent</em> mark.</h2>
+      <p class="bp-body">The Battle Pass unlocks all 33 exclusive ship skins — each documented in the lore of the Shattered Veil universe — and grants the ✦ FOUNDER badge permanently. A single one-time purchase. No subscriptions. No recurring charges.</p>
+      <a href="https://stellar-command.fly.dev/hangar" class="btn-primary" style="font-size:11px">UNLOCK BATTLE PASS ✦</a>
+    </div>
+    <div class="bp-tiers">
+      <div class="bp-tier-row reveal"><div class="bp-tier-num">TIER 1</div><div><div class="bp-tier-name">NOVA BLADE</div><div class="bp-tier-lore">Freewake Coalition ceremonial combat vessel. Designed to be seen as much as flown. Enemy commanders hesitate a half-second before engaging. That hesitation has saved lives.</div></div></div>
+      <div class="bp-tier-row reveal"><div class="bp-tier-num">TIER 9</div><div><div class="bp-tier-name">SPECTRAL</div><div class="bp-tier-lore">Built around a recovered Builder transit node integrated into the navigation core. Pilots describe "seeing routes" that don't appear on any chart. The Houses stopped investigating why.</div></div></div>
+      <div class="bp-tier-row reveal"><div class="bp-tier-num">TIER 17</div><div><div class="bp-tier-name">OMEGA ZERO</div><div class="bp-tier-lore">Pulled from a Veil transit collapse point. Construction predates any known manufacturing technique by two centuries. Every faction has tried to acquire it. Every attempt has failed.</div></div></div>
+      <div class="bp-tier-row reveal"><div class="bp-tier-num">TIER 33</div><div><div class="bp-tier-name">APEX PREDATOR</div><div class="bp-tier-lore">All records sealed. The encounter lasted eleven seconds. The navigator did not speak for three days afterward.</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CTA ────────────────────────────────────────────────────── -->
+<div id="cta">
+  <canvas id="ctaCanvas"></canvas>
+  <div class="cta-content">
+    <div class="cta-title">LAUNCH NOW</div>
+    <div class="cta-sub">NO DOWNLOAD · BROWSER-BASED · FREE TO PLAY</div>
+    <a href="https://stellar-command.fly.dev" class="btn-primary" style="font-size:14px;padding:18px 64px">ENTER THE SECTOR ▶</a>
+  </div>
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-logo">STELLAR COMMAND</div>
+  <p>SET IN THE SHATTERED VEIL UNIVERSE</p>
+  <p><span class="glow-dot"></span>SECTOR GRID ACTIVE</p>
+</footer>
+
+<script>
+// ── Starfield ─────────────────────────────────────────────────
+function initStarfield(canvasId, density) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H, stars = [];
+  function resize(){ W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; }
+  function spawn(){ return { x:Math.random()*W, y:Math.random()*H, r:Math.random()*1.4+0.2, phase:Math.random()*Math.PI*2, speed:Math.random()*0.008+0.003, opacity:Math.random()*0.5+0.1 }; }
+  resize();
+  stars = Array.from({length:density}, spawn);
+  window.addEventListener('resize', resize);
+  (function frame(){
+    ctx.clearRect(0,0,W,H);
+    for(const s of stars){
+      s.phase += s.speed;
+      const a = s.opacity*(0.5+0.5*Math.sin(s.phase));
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,230,255,${a})`; ctx.fill();
+    }
+    requestAnimationFrame(frame);
+  })();
+}
+
+// ── Ship silhouettes in hero ──────────────────────────────────
+function initHeroShips(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  const SHIP_FILES = ['rank1.png','rank10.png','rank15.png','rank20.png','rank25.png','rank30.png','rank35.png','rank40.png','rank45.png','rank50.png','rank55.png'];
+  const BASE = 'https://stellar-command.fly.dev/assets/ships/progression/';
+  const imgs = {};
+  let imgsLoaded = 0;
+  SHIP_FILES.forEach(f => {
+    const img = new Image(); img.crossOrigin='anonymous';
+    img.onload = () => imgsLoaded++;
+    img.src = BASE + f;
+    imgs[f] = img;
+  });
+
+  const ships = [];
+  function resize(){ W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; }
+  resize(); window.addEventListener('resize', resize);
+
+  function spawnShip(){
+    const edge = Math.floor(Math.random()*4);
+    const cx = W*0.5+(Math.random()-0.5)*W*0.35, cy = H*0.5+(Math.random()-0.5)*H*0.35;
+    let x, y;
+    if(edge===0){x=Math.random()*W;y=-40;} else if(edge===1){x=Math.random()*W;y=H+40;}
+    else if(edge===2){x=-40;y=Math.random()*H;} else{x=W+40;y=Math.random()*H;}
+    const angle = Math.atan2(cy-y,cx-x)+(Math.random()-0.5)*0.4;
+    const speed = Math.random()*0.8+0.3;
+    const size  = Math.random()*28+18;
+    const file  = SHIP_FILES[Math.floor(Math.random()*SHIP_FILES.length)];
+    return { x, y, angle, speed, size, file, life:1, decay:Math.random()*0.0008+0.0002, trail:[] };
+  }
+
+  (function frame(){
+    ctx.clearRect(0,0,W,H);
+    if(ships.length < 8 && Math.random()<0.02) ships.push(spawnShip());
+    for(let i=ships.length-1;i>=0;i--){
+      const s=ships[i];
+      s.x+=Math.cos(s.angle)*s.speed; s.y+=Math.sin(s.angle)*s.speed; s.life-=s.decay;
+      s.trail.push({x:s.x,y:s.y});
+      if(s.trail.length>50) s.trail.shift();
+      // Trail
+      for(let j=1;j<s.trail.length;j++){
+        const a=(j/s.trail.length)*s.life*0.18;
+        ctx.strokeStyle=`rgba(0,255,255,${a})`; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(s.trail[j-1].x,s.trail[j-1].y); ctx.lineTo(s.trail[j].x,s.trail[j].y); ctx.stroke();
+      }
+      // Ship image
+      const img = imgs[s.file];
+      if(img && img.complete && img.naturalWidth>0){
+        ctx.save();
+        ctx.globalAlpha = s.life * 0.65;
+        ctx.translate(s.x,s.y); ctx.rotate(s.angle+Math.PI/2);
+        ctx.drawImage(img,-s.size/2,-s.size/2,s.size,s.size);
+        ctx.restore();
+      } else {
+        // Fallback dot
+        ctx.beginPath(); ctx.arc(s.x,s.y,3,0,Math.PI*2);
+        ctx.fillStyle=`rgba(0,255,255,${s.life*0.6})`; ctx.fill();
+      }
+      if(s.life<=0||s.x<-80||s.x>W+80||s.y<-80||s.y>H+80) ships.splice(i,1);
+    }
+    requestAnimationFrame(frame);
+  })();
+}
+
+// ── Scroll reveal ─────────────────────────────────────────────
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold:0.07 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── Boot ──────────────────────────────────────────────────────
+initStarfield('starCanvas', 200);
+initHeroShips('starCanvas');
+initStarfield('ctaCanvas', 120);
+</script>
+</body>
+</html>
